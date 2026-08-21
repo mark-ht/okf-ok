@@ -46,6 +46,9 @@ func localDiagnostics(bundle Bundle, ref Reference, options Options) []Diagnosti
 		resolved = ""
 	}
 	if resolved == ".." || strings.HasPrefix(resolved, "../") {
+		if workspaceReference(ref, options) {
+			return workspaceDiagnostics(bundle, ref, decoded, options.WorkspaceRoot)
+		}
 		return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "reference escapes the bundle root")}
 	}
 	if traversesSymlink(bundle, resolved) {
@@ -65,6 +68,53 @@ func localDiagnostics(bundle Bundle, ref Reference, options Options) []Diagnosti
 	d := diagnostic("OKF101", SeverityWarning, ref.Location, ref, fmt.Sprintf("local target %q does not exist in the bundle", resolved))
 	d.Resolved = resolved
 	return []Diagnostic{d}
+}
+
+func workspaceReference(ref Reference, options Options) bool {
+	return options.WorkspaceRoot != "" && strings.HasPrefix(ref.Kind, "frontmatter.")
+}
+
+func workspaceDiagnostics(bundle Bundle, ref Reference, decoded, workspaceRoot string) []Diagnostic {
+	workspace, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "workspace root cannot be resolved")}
+	}
+	info, err := os.Lstat(workspace)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "workspace root must be a non-symlinked directory")}
+	}
+	bundleRelative, err := filepath.Rel(workspace, bundle.Root)
+	if err != nil || bundleRelative == ".." || strings.HasPrefix(bundleRelative, ".."+string(filepath.Separator)) {
+		return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "bundle root is outside the workspace root")}
+	}
+	candidate := filepath.Clean(filepath.Join(bundle.Root, filepath.FromSlash(path.Dir(ref.Origin)), filepath.FromSlash(decoded)))
+	relative, err := filepath.Rel(workspace, candidate)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "reference escapes the workspace root")}
+	}
+	current := workspace
+	for _, segment := range strings.Split(filepath.ToSlash(relative), "/") {
+		if segment == "." || segment == "" {
+			continue
+		}
+		current = filepath.Join(current, segment)
+		entry, statErr := os.Lstat(current)
+		if statErr != nil {
+			d := diagnostic("OKF101", SeverityWarning, ref.Location, ref, "workspace target does not exist")
+			d.Resolved = filepath.ToSlash(relative)
+			return []Diagnostic{d}
+		}
+		if entry.Mode()&os.ModeSymlink != 0 {
+			return []Diagnostic{diagnostic("OKF100", SeverityError, ref.Location, ref, "reference traverses a symlinked workspace path")}
+		}
+	}
+	info, err = os.Stat(candidate)
+	if err != nil || !info.Mode().IsRegular() {
+		d := diagnostic("OKF101", SeverityWarning, ref.Location, ref, "workspace target is not a regular file")
+		d.Resolved = filepath.ToSlash(relative)
+		return []Diagnostic{d}
+	}
+	return nil
 }
 
 func traversesSymlink(bundle Bundle, resolved string) bool {

@@ -51,7 +51,11 @@ type Bundle struct {
 type Options struct {
 	StrictSourcePaths bool
 	CheckFragments    bool
-	Remote            RemoteOptions
+	// WorkspaceRoot permits frontmatter artifact references to resolve outside
+	// the bundle, but only beneath this explicit, non-symlinked root.
+	// Markdown concept links always remain bundle-contained.
+	WorkspaceRoot string
+	Remote        RemoteOptions
 }
 
 // Summary describes the work completed during one bundle check. Counts are

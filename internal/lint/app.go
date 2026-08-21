@@ -26,6 +26,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	serve := flags.String("serve", "", "serve a read-only relationship viewer on address (for example 127.0.0.1:8080)")
 	failOn := flags.String("fail-on", "error", "fail on: error or warning")
 	strictSources := flags.Bool("strict-source-paths", false, "treat ambiguous source resources as local paths")
+	workspaceRoot := flags.String("workspace-root", "", "allow frontmatter artifact references under this explicit workspace root")
 	checkFragments := flags.Bool("check-fragments", false, "validate local Markdown heading fragments")
 	checkRemote := flags.Bool("check-remote", false, "probe HTTPS references under an explicit remote policy")
 	remotePolicy := flags.String("remote-policy", "off", "remote policy: off, allowlist, or public")
@@ -88,6 +89,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	options := Options{
 		StrictSourcePaths: *strictSources,
 		CheckFragments:    *checkFragments,
+		WorkspaceRoot:     *workspaceRoot,
 		Remote:            RemoteOptions{Enabled: *checkRemote, Policy: policy, Hosts: allowedHosts, Workers: *remoteWorkers, MaxURLs: *maxRemoteURLs, Timeout: *remoteTimeout, Deadline: *remoteDeadline},
 	}
 	if *serve != "" {

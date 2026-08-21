@@ -31,12 +31,14 @@ type ViewerGraph struct {
 }
 
 type ViewerNode struct {
-	Path      string    `json:"path"`
-	Kind      string    `json:"kind"`
-	Type      string    `json:"type,omitempty"`
-	Headings  []Heading `json:"headings"`
-	Preview   string    `json:"preview"`
-	Truncated bool      `json:"truncated"`
+	Path            string    `json:"path"`
+	Kind            string    `json:"kind"`
+	Type            string    `json:"type,omitempty"`
+	Resource        string    `json:"resource,omitempty"`
+	SourceAvailable bool      `json:"source_available"`
+	Headings        []Heading `json:"headings"`
+	Preview         string    `json:"preview"`
+	Truncated       bool      `json:"truncated"`
 }
 
 type ViewerEdge struct {
@@ -79,7 +81,11 @@ func BuildViewerGraph(ctx context.Context, root string, options Options) (Viewer
 			continue // CheckWithSummary already includes the read diagnostic.
 		}
 		fm, _ := parseFrontmatter(file, source)
-		node := ViewerNode{Path: file, Kind: "concept", Headings: documentHeadings(markdownBodyOnly(source, fm))}
+		resource := ""
+		if value := mapValue(fm.root, "resource"); value != nil {
+			resource = strings.TrimSpace(value.Value)
+		}
+		node := ViewerNode{Path: file, Kind: "concept", Resource: resource, SourceAvailable: options.WorkspaceRoot != "" && resource != "", Headings: documentHeadings(markdownBodyOnly(source, fm))}
 		if isReserved(file) {
 			node.Kind = "reserved"
 		} else if typ, ok := conceptType(fm); ok {
@@ -188,7 +194,7 @@ func Serve(ctx context.Context, root, address string, options Options, stderr io
 		return err
 	}
 	defer listener.Close()
-	server := &http.Server{Handler: viewerHandler(graph, graphRoot(root)), ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Handler: viewerHandler(graph, graphRoot(root), options), ReadHeaderTimeout: 5 * time.Second}
 	errs := make(chan error, 1)
 	go func() { errs <- server.Serve(listener) }()
 	fmt.Fprintf(stderr, "okflint: viewer serving %s for %s\n", listener.Addr(), graphRoot(root))
@@ -206,7 +212,7 @@ func Serve(ctx context.Context, root, address string, options Options, stderr io
 	}
 }
 
-func viewerHandler(graph ViewerGraph, root string) http.Handler {
+func viewerHandler(graph ViewerGraph, root string, options Options) http.Handler {
 	nodes := make(map[string]struct{}, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		nodes[node.Path] = struct{}{}
@@ -263,6 +269,32 @@ func viewerHandler(graph ViewerGraph, root string) http.Handler {
 		}
 		_, _ = io.WriteString(w, value)
 	})
+	mux.HandleFunc("/source", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		file, ok := viewerDocumentPath(r, nodes)
+		if !ok || options.WorkspaceRoot == "" {
+			http.NotFound(w, r)
+			return
+		}
+		resource := ""
+		for _, node := range graph.Nodes {
+			if node.Path == file {
+				resource = node.Resource
+				break
+			}
+		}
+		source, err := safeViewerWorkspaceRead(root, options.WorkspaceRoot, file, resource)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		_, _ = w.Write(source)
+	})
 	mux.HandleFunc("/document", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -283,6 +315,23 @@ func viewerHandler(graph ViewerGraph, root string) http.Handler {
 		_, _ = w.Write(source)
 	})
 	return mux
+}
+
+func safeViewerWorkspaceRead(bundleRoot, workspaceRoot, origin, target string) ([]byte, error) {
+	if target == "" || uriSchemeRE.MatchString(target) || strings.HasPrefix(target, "/") {
+		return nil, fmt.Errorf("not a local workspace resource")
+	}
+	target = strings.SplitN(strings.SplitN(target, "#", 2)[0], "?", 2)[0]
+	candidate := filepath.Clean(filepath.Join(bundleRoot, filepath.FromSlash(path.Dir(origin)), filepath.FromSlash(target)))
+	workspace, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	relative, err := filepath.Rel(workspace, candidate)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return nil, fmt.Errorf("source escapes workspace")
+	}
+	return safeViewerRead(workspace, filepath.ToSlash(relative))
 }
 
 func safeViewerRead(root, file string) ([]byte, error) {

@@ -47,7 +47,7 @@ func TestViewerGraphAndDocumentRoutes(t *testing.T) {
 		t.Fatalf("edge = %#v", edge)
 	}
 
-	server := httptest.NewServer(viewerHandler(graph, root))
+	server := httptest.NewServer(viewerHandler(graph, root, Options{}))
 	defer server.Close()
 	response, err := http.Get(server.URL + "/api/graph")
 	if err != nil {
