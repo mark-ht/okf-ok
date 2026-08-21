@@ -62,6 +62,12 @@ Use `--format sarif` to produce a deterministic SARIF 2.1.0 report for code-scan
     sarif_file: okflint.sarif
 ```
 
+## Agent skill
+
+The tool-neutral [Agent Skills](https://agentskills.io)-compatible package is at [`skills/okf-lint/`](skills/okf-lint/). It contains only standard Markdown skill instructions and can be added to any compatible agent's skill search path without a harness-specific extension.
+
+The skill defaults to offline JSONL linting after an OKF edit and includes a generic, bounded post-edit/post-turn lifecycle contract for harnesses that support hooks. See [`skills/README.md`](skills/README.md) for installation and portability guidance.
+
 ## Development
 
 ```sh
