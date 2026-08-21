@@ -1,37 +1,49 @@
 # okf-ok
 
-A Go linter for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) bundles.
+A container-first linter for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) bundles, implemented in Go.
 
 `okflint` is read-only and offline by default. It validates the minimum OKF v0.2 document structure and reports local Markdown and standardized frontmatter references whose targets have drifted. OKF permits broken cross-links, so missing targets are warnings rather than conformance errors.
 
-## Run
+## Run with Docker
+
+Release images are published to GitHub Container Registry for `linux/amd64` and `linux/arm64`. Pin a digest in automation, mount the bundle read-only, and disable networking for the offline default:
 
 ```sh
-go run ./cmd/okflint ./path/to/bundle
-# Machine-readable diagnostics for an agent or CI step
-go run ./cmd/okflint --format jsonl --fail-on warning ./path/to/bundle
+export OKFLINT_IMAGE='ghcr.io/mark-ht/okf-ok@sha256:<published-digest>'
+
+docker run --rm --read-only --network none \
+  -v "$PWD:/work:ro" \
+  "$OKFLINT_IMAGE" /work/bundle
+
+# Machine-readable diagnostics for an agent or CI step.
+docker run --rm --read-only --network none \
+  -v "$PWD:/work:ro" \
+  "$OKFLINT_IMAGE" --format jsonl --fail-on warning /work/bundle
 ```
 
-The linter checks `resource`, `sources[].resource`, `computation`, `executor.resource`, and `attester.resource`, as well as Markdown links. It makes no network requests by default. Use `--check-fragments` to opt into the documented local heading-anchor policy. Remote HTTPS health is explicit and policy-bound:
+The image runs as a non-root user. It checks `resource`, `sources[].resource`, `computation`, `executor.resource`, and `attester.resource`, as well as Markdown links. Use `--check-fragments` to opt into the documented local heading-anchor policy.
+
+Remote HTTPS health is explicit and policy-bound. Enable a network only for an authorized environment and a narrow allowlist:
 
 ```sh
-# An agent-safe allowlist. VPN-only/private destinations are intentionally not probed.
-go run ./cmd/okflint --check-remote --remote-policy allowlist \
-  --allow-host developers.google.com ./path/to/bundle
+# VPN-only/private destinations are intentionally not probed.
+docker run --rm --read-only --network bridge \
+  -v "$PWD:/work:ro" \
+  "$OKFLINT_IMAGE" --check-remote --remote-policy allowlist \
+  --allow-host developers.google.com /work/bundle
 ```
 
-Remote outcomes distinguish `gone` (404/410) and `redirected` from environment-dependent `inconclusive` (for example, VPN-only, authentication, timeout, or 5xx). Only selected outcomes fail with `--fail-on-remote=gone|redirected|all`.
+Remote outcomes distinguish `gone` (404/410) and `redirected` from environment-dependent `inconclusive` (for example, VPN-only, authentication, timeout, or 5xx). Only selected outcomes fail with `--fail-on-remote=gone|redirected|all`. Do not provide credentials or a writable bundle mount unless a separate workflow requires them.
 
-## Container image
+### Build locally
 
-Release images are published to GitHub Container Registry for `linux/amd64` and `linux/arm64`. Mount bundles read-only and pin production CI to a published digest:
+The Dockerfile uses a multi-stage build: Go is present only in the build stage, while the final image contains the stripped, statically linked `okflint` binary and a non-root distroless runtime.
 
 ```sh
-docker run --rm -v "$PWD:/work:ro" \
-  ghcr.io/mark-ht/okf-ok:v1.0.0 /work/bundle
+docker build -t okflint:local .
+docker run --rm --read-only --network none \
+  -v "$PWD:/work:ro" okflint:local /work/bundle
 ```
-
-The image runs as a non-root user and has the same offline default as the CLI. Remote checks remain explicit command arguments; do not provide credentials or a writable bundle mount unless a separate workflow requires them.
 
 ## GitHub Action
 
@@ -56,7 +68,10 @@ Exit status is `0` when no selected findings exist, `1` for diagnostics selected
 Use `--format sarif` to produce a deterministic SARIF 2.1.0 report for code-scanning annotations:
 
 ```yaml
-- run: okflint --format sarif knowledge > okflint.sarif
+- run: >-
+    docker run --rm --read-only --network none
+    -v "$PWD:/work:ro" "$OKFLINT_IMAGE"
+    --format sarif /work/knowledge > okflint.sarif
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: okflint.sarif
