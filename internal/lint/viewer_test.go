@@ -21,6 +21,9 @@ func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
 	if !bytes.Contains(viewerHTML, []byte(`svg.replaceChildren();`)) {
 		t.Fatal("viewer HTML must clear stale SVG nodes before rerendering")
 	}
+	if !bytes.Contains(viewerHTML, []byte(`const groups=new Map()`)) {
+		t.Fatal("viewer HTML must group repeated incoming and outgoing references")
+	}
 }
 
 func TestViewerGraphAndDocumentRoutes(t *testing.T) {
