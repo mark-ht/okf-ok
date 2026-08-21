@@ -1,2 +1,38 @@
 # okf-ok
-Open Knowledge Format (OKF) linter
+
+A Go linter for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) bundles.
+
+`okflint` is read-only and offline by default. It validates the minimum OKF v0.2 document structure and reports local Markdown and standardized frontmatter references whose targets have drifted. OKF permits broken cross-links, so missing targets are warnings rather than conformance errors.
+
+## Run
+
+```sh
+go run ./cmd/okflint ./path/to/bundle
+# Machine-readable diagnostics for an agent or CI step
+go run ./cmd/okflint --format jsonl --fail-on warning ./path/to/bundle
+```
+
+The linter checks `resource`, `sources[].resource`, `computation`, `executor.resource`, and `attester.resource`, as well as Markdown links. It makes no network requests by default. Use `--check-fragments` to opt into the documented local heading-anchor policy. Remote HTTPS health is explicit and policy-bound:
+
+```sh
+# An agent-safe allowlist. VPN-only/private destinations are intentionally not probed.
+go run ./cmd/okflint --check-remote --remote-policy allowlist \
+  --allow-host developers.google.com ./path/to/bundle
+```
+
+Remote outcomes distinguish `gone` (404/410) and `redirected` from environment-dependent `inconclusive` (for example, VPN-only, authentication, timeout, or 5xx). Only selected outcomes fail with `--fail-on-remote=gone|redirected|all`.
+
+## Automation contract
+
+`--format jsonl` emits one `okf.lint/v1` diagnostic per line. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
+
+Exit status is `0` when no selected findings exist, `1` for diagnostics selected by `--fail-on` or `--fail-on-remote`, `2` for invalid invocation or an unreadable root, `3` for an output/internal failure, and `130` for cancellation. Bare `sources[].resource` values that might be scope descriptors are informational by default; use `--strict-source-paths` to require them to resolve locally.
+
+## Development
+
+```sh
+go test ./...
+go test -race ./...
+go vet ./...
+test -z "$(gofmt -l .)"
+```
