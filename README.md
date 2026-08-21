@@ -54,7 +54,7 @@ okflint --serve 127.0.0.1:8080 ./bundle
 # Open http://127.0.0.1:8080
 ```
 
-The viewer never performs remote link checks or loads third-party web assets. It is deliberately a local server: select a loopback address unless access from another host is intentional.
+Clicking a heading loads that heading's bounded Markdown section into the side panel; "Open document source" serves the full document as safe plain text. The viewer never performs remote link checks or loads third-party web assets. It is deliberately a local server: select a loopback address unless access from another host is intentional.
 
 To serve a pinned remote repository through the container, clone it on the host first, mount it read-only, and publish only a loopback port. The bridge network permits the browser's inbound connection; `okflint` makes no outbound requests in viewer mode.
 

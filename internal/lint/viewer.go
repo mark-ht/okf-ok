@@ -228,6 +228,41 @@ func viewerHandler(graph ViewerGraph, root string) http.Handler {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(graph)
 	})
+	mux.HandleFunc("/section", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		file, ok := viewerDocumentPath(r, nodes)
+		if !ok {
+			http.Error(w, "invalid document path", http.StatusBadRequest)
+			return
+		}
+		heading := r.URL.Query().Get("heading")
+		if heading == "" {
+			http.Error(w, "missing heading", http.StatusBadRequest)
+			return
+		}
+		source, err := safeViewerRead(root, file)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		fm, _ := parseFrontmatter(file, source)
+		body, _ := markdownBody(source, fm)
+		section, found := documentSection(body, heading)
+		if !found {
+			http.NotFound(w, r)
+			return
+		}
+		value, truncated := preview([]byte(section))
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if truncated {
+			w.Header().Set("X-OKF-Truncated", "true")
+		}
+		_, _ = io.WriteString(w, value)
+	})
 	mux.HandleFunc("/document", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)

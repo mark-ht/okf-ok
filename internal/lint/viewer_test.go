@@ -3,6 +3,7 @@ package lint
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -68,6 +69,19 @@ func TestViewerGraphAndDocumentRoutes(t *testing.T) {
 		t.Fatalf("document response = %d %q %#v", response.StatusCode, response.Header.Get("Content-Type"), response.Header)
 	}
 	response.Body.Close()
+
+	response, err = http.Get(server.URL + "/section?path=notes/one.md&heading=one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	section, err := io.ReadAll(response.Body)
+	response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK || !strings.Contains(string(section), "One\nSee [two]") {
+		t.Fatalf("section response = %d %q", response.StatusCode, section)
+	}
 
 	if err := os.Remove(root + "/notes/one.md"); err != nil {
 		t.Fatal(err)

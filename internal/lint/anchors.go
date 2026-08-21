@@ -93,8 +93,40 @@ func headings(source []byte) map[string]struct{} {
 	return out
 }
 
+type headingSpan struct {
+	Heading
+	start int
+}
+
 func documentHeadings(source []byte) []Heading {
-	var out []Heading
+	spans := documentHeadingSpans(source)
+	out := make([]Heading, len(spans))
+	for i, span := range spans {
+		out[i] = span.Heading
+	}
+	return out
+}
+
+func documentSection(source []byte, id string) (string, bool) {
+	spans := documentHeadingSpans(source)
+	for i, span := range spans {
+		if span.ID != id {
+			continue
+		}
+		end := len(source)
+		for _, next := range spans[i+1:] {
+			if next.Level <= span.Level {
+				end = next.start
+				break
+			}
+		}
+		return string(source[span.start:end]), true
+	}
+	return "", false
+}
+
+func documentHeadingSpans(source []byte) []headingSpan {
+	var out []headingSpan
 	counts := map[string]int{}
 	document := goldmark.New().Parser().Parse(text.NewReader(source))
 	_ = ast.Walk(document, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -102,7 +134,7 @@ func documentHeadings(source []byte) []Heading {
 			return ast.WalkContinue, nil
 		}
 		heading, ok := node.(*ast.Heading)
-		if !ok {
+		if !ok || heading.Lines().Len() == 0 {
 			return ast.WalkContinue, nil
 		}
 		value := string(heading.Text(source))
@@ -115,7 +147,7 @@ func documentHeadings(source []byte) []Heading {
 		if count > 0 {
 			slug += "-" + strconv.Itoa(count)
 		}
-		out = append(out, Heading{ID: slug, Text: value, Level: heading.Level})
+		out = append(out, headingSpan{Heading: Heading{ID: slug, Text: value, Level: heading.Level}, start: heading.Lines().At(0).Start})
 		return ast.WalkContinue, nil
 	})
 	return out
