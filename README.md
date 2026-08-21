@@ -45,6 +45,20 @@ docker run --rm --read-only --network none \
   -v "$PWD:/work:ro" okflint:local /work/bundle
 ```
 
+## Generate Go knowledge bundles
+
+`okfok` is the workspace command. It inventories local Go declarations and produces a deterministic, reviewable OKF plan; it never writes until `apply` receives that plan.
+
+```sh
+okfok generate plan --repo . --bundle knowledge --format json > .okfok/plan.json
+okfok generate apply --repo . --plan .okfok/plan.json
+okfok lint --repo . --bundle knowledge
+```
+
+Generation is offline and does not execute Go code. The initial generator covers declared Go package symbols and members, writes only `knowledge/`, and refuses to overwrite hand-authored output. Its source provenance may point to regular non-symlinked files under the explicit repository workspace; Markdown concept links remain within `knowledge/`.
+
+The existing bare `okflint <bundle>` interface remains available for compatibility. The container entrypoint is now `okfok` and likewise treats a bare bundle path as legacy lint usage.
+
 ## Relationship viewer
 
 Serve a read-only local graph for a bundle with document nodes, local-reference edges, headings, source previews, and lint-state styling:
@@ -71,7 +85,7 @@ docker run --rm --read-only --network bridge \
 
 Open `http://127.0.0.1:8080`. Direct Git URL fetching is intentionally unsupported: pin and review the checkout outside the minimal runtime image.
 
-+## GitHub Action
+## GitHub Action
 
 The composite action runs a release image with a read-only workspace mount. Pin the image digest rather than a mutable tag:
 

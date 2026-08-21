@@ -13,11 +13,14 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
-      -o /out/okflint ./cmd/okflint
+      -o /out/okflint ./cmd/okflint && \
+    go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
+      -o /out/okfok ./cmd/okfok
 
 # Static distroless is a minimal, shell-free, non-root runtime image.
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build --chown=nonroot:nonroot /out/okflint /usr/local/bin/okflint
+COPY --from=build --chown=nonroot:nonroot /out/okfok /usr/local/bin/okfok
 
 USER nonroot:nonroot
-ENTRYPOINT ["/usr/local/bin/okflint"]
+ENTRYPOINT ["/usr/local/bin/okfok"]
