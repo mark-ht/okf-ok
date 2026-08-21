@@ -22,6 +22,17 @@ go run ./cmd/okflint --check-remote --remote-policy allowlist \
 
 Remote outcomes distinguish `gone` (404/410) and `redirected` from environment-dependent `inconclusive` (for example, VPN-only, authentication, timeout, or 5xx). Only selected outcomes fail with `--fail-on-remote=gone|redirected|all`.
 
+## Container image
+
+Release images are published to GitHub Container Registry for `linux/amd64` and `linux/arm64`. Mount bundles read-only and pin production CI to a published digest:
+
+```sh
+docker run --rm -v "$PWD:/work:ro" \
+  ghcr.io/mark-ht/okf-ok:v1.0.0 /work/bundle
+```
+
+The image runs as a non-root user and has the same offline default as the CLI. Remote checks remain explicit command arguments; do not provide credentials or a writable bundle mount unless a separate workflow requires them.
+
 ## Automation contract
 
 `--format jsonl` emits one `okf.lint/v1` diagnostic per line. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
