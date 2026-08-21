@@ -5,7 +5,7 @@
     {
       "tool": {
         "driver": {
-          "name": "okflint",
+          "name": "okfok",
           "informationUri": "https://github.com/mark-ht/okf-ok",
           "rules": [
             {

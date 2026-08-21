@@ -106,7 +106,7 @@ func renderSARIF(out io.Writer, diagnostics []Diagnostic) error {
 	}
 	report := sarifReport{
 		Version: "2.1.0", Schema: "https://json.schemastore.org/sarif-2.1.0.json",
-		Runs: []sarifRun{{Tool: sarifTool{Driver: sarifDriver{Name: "okflint", InformationURI: "https://github.com/mark-ht/okf-ok", Rules: rules}}, Results: results}},
+		Runs: []sarifRun{{Tool: sarifTool{Driver: sarifDriver{Name: "okfok", InformationURI: "https://github.com/mark-ht/okf-ok", Rules: rules}}, Results: results}},
 	}
 	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "  ")

@@ -197,7 +197,7 @@ func Serve(ctx context.Context, root, address string, options Options, stderr io
 	server := &http.Server{Handler: viewerHandler(graph, graphRoot(root), options), ReadHeaderTimeout: 5 * time.Second}
 	errs := make(chan error, 1)
 	go func() { errs <- server.Serve(listener) }()
-	fmt.Fprintf(stderr, "okflint: viewer serving %s for %s\n", listener.Addr(), graphRoot(root))
+	fmt.Fprintf(stderr, "okfok: viewer serving %s for %s\n", listener.Addr(), graphRoot(root))
 	select {
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

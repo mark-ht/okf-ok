@@ -194,7 +194,7 @@ func remoteRequest(ctx context.Context, client *http.Client, target *url.URL) (*
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("User-Agent", "okflint/0")
+	request.Header.Set("User-Agent", "okfok/0")
 	response, err := client.Do(request)
 	if err != nil || (response.StatusCode != http.StatusMethodNotAllowed && response.StatusCode != http.StatusNotImplemented) {
 		return response, err
@@ -205,7 +205,7 @@ func remoteRequest(ctx context.Context, client *http.Client, target *url.URL) (*
 		return nil, err
 	}
 	request.Header.Set("Range", "bytes=0-0")
-	request.Header.Set("User-Agent", "okflint/0")
+	request.Header.Set("User-Agent", "okfok/0")
 	return client.Do(request)
 }
 

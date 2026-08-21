@@ -1,5 +1,5 @@
 name: OKF lint
-description: Run a digest-pinned okflint container against an OKF bundle.
+description: Run a digest-pinned okfok container against an OKF bundle.
 inputs:
   image:
     description: Digest-pinned GHCR image, for example ghcr.io/mark-ht/okf-ok@sha256:<digest>.
@@ -8,11 +8,11 @@ inputs:
     description: Bundle directory relative to the GitHub workspace.
     default: .
   format:
-    description: okflint output format.
+    description: okfok output format.
     default: jsonl
   report-path:
     description: Report file relative to the GitHub workspace.
-    default: .okflint/report.jsonl
+    default: .okfok/report.jsonl
   fail-on:
     description: Local finding threshold: error or warning.
     default: error
@@ -36,7 +36,7 @@ inputs:
     default: none
 outputs:
   exit-code:
-    description: okflint process exit code.
+    description: okfok process exit code.
     value: ${{ steps.lint.outputs.exit-code }}
   report-path:
     description: Report path relative to the workspace.

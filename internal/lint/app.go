@@ -20,7 +20,7 @@ func (values *stringList) Set(value string) error {
 // Main is the command entry point. It is exported to keep main.go free of CLI
 // policy and to let integration tests exercise the exact command behavior.
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	flags := flag.NewFlagSet("okflint", flag.ContinueOnError)
+	flags := flag.NewFlagSet("okfok", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	format := flags.String("format", "text", "output format: text, json, jsonl, or sarif")
 	serve := flags.String("serve", "", "serve a read-only relationship viewer on address (for example 127.0.0.1:8080)")
@@ -41,7 +41,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if flags.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: okflint [flags] <bundle-root>")
+		fmt.Fprintln(stderr, "usage: okfok [flags] <bundle-root>")
 		return 2
 	}
 	if *format != "text" && *format != "json" && *format != "jsonl" && *format != "sarif" {
@@ -97,7 +97,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return 130
 			}
-			fmt.Fprintf(stderr, "okflint: viewer: %v\n", err)
+			fmt.Fprintf(stderr, "okfok: viewer: %v\n", err)
 			return 2
 		}
 		return 0
@@ -107,11 +107,11 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return 130
 		}
-		fmt.Fprintf(stderr, "okflint: %v\n", err)
+		fmt.Fprintf(stderr, "okfok: %v\n", err)
 		return 2
 	}
 	if err := render(stdout, result.Diagnostics, result.Summary, *format); err != nil {
-		fmt.Fprintf(stderr, "okflint: writing output: %v\n", err)
+		fmt.Fprintf(stderr, "okfok: writing output: %v\n", err)
 		return 3
 	}
 	errors, warnings, remoteFailures := 0, 0, 0
@@ -126,7 +126,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			remoteFailures++
 		}
 	}
-	fmt.Fprintf(stderr, "okflint: %d error(s), %d warning(s), %d selected remote failure(s)\n", errors, warnings, remoteFailures)
+	fmt.Fprintf(stderr, "okfok: %d error(s), %d warning(s), %d selected remote failure(s)\n", errors, warnings, remoteFailures)
 	if errors > 0 || (*failOn == "warning" && warnings > 0) || remoteFailures > 0 {
 		return 1
 	}

@@ -9,7 +9,7 @@ on_write_or_edit(path):
 
 on_agent_settled(parent_abort_signal):
   for each dirty bundle, at most twice per user request:
-    run okflint --format jsonl --fail-on warning <bundle>
+    run okfok --format jsonl --fail-on warning <bundle>
         with parent_abort_signal and a bounded timeout
     if clean: record/display validation summary
     if findings: provide a bounded JSONL report to the same agent for repair

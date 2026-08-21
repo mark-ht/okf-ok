@@ -2,23 +2,23 @@
 
 A container-first linter for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) bundles, implemented in Go.
 
-`okflint` is read-only and offline by default. It validates the minimum OKF v0.2 document structure and reports local Markdown and standardized frontmatter references whose targets have drifted. OKF permits broken cross-links, so missing targets are warnings rather than conformance errors.
+`okfok` is read-only and offline by default. It validates the minimum OKF v0.2 document structure and reports local Markdown and standardized frontmatter references whose targets have drifted. OKF permits broken cross-links, so missing targets are warnings rather than conformance errors.
 
 ## Run with Docker
 
 Release images are published to GitHub Container Registry for `linux/amd64` and `linux/arm64`. Pin a digest in automation, mount the bundle read-only, and disable networking for the offline default:
 
 ```sh
-export OKFLINT_IMAGE='ghcr.io/mark-ht/okf-ok@sha256:<published-digest>'
+export OKFOK_IMAGE='ghcr.io/mark-ht/okf-ok@sha256:<published-digest>'
 
 docker run --rm --read-only --network none \
   -v "$PWD:/work:ro" \
-  "$OKFLINT_IMAGE" /work/bundle
+  "$OKFOK_IMAGE" /work/bundle
 
 # Machine-readable diagnostics for an agent or CI step.
 docker run --rm --read-only --network none \
   -v "$PWD:/work:ro" \
-  "$OKFLINT_IMAGE" --format jsonl --fail-on warning /work/bundle
+  "$OKFOK_IMAGE" --format jsonl --fail-on warning /work/bundle
 ```
 
 The image runs as a non-root user. It checks `resource`, `sources[].resource`, `computation`, `executor.resource`, and `attester.resource`, as well as Markdown links. Use `--check-fragments` to opt into the documented local heading-anchor policy.
@@ -29,7 +29,7 @@ Remote HTTPS health is explicit and policy-bound. Enable a network only for an a
 # VPN-only/private destinations are intentionally not probed.
 docker run --rm --read-only --network bridge \
   -v "$PWD:/work:ro" \
-  "$OKFLINT_IMAGE" --check-remote --remote-policy allowlist \
+  "$OKFOK_IMAGE" --check-remote --remote-policy allowlist \
   --allow-host developers.google.com /work/bundle
 ```
 
@@ -37,12 +37,12 @@ Remote outcomes distinguish `gone` (404/410) and `redirected` from environment-d
 
 ### Build locally
 
-The Dockerfile uses a multi-stage build: Go is present only in the build stage, while the final image contains the stripped, statically linked `okflint` binary and a non-root distroless runtime.
+The Dockerfile uses a multi-stage build: Go is present only in the build stage, while the final image contains the stripped, statically linked `okfok` binary and a non-root distroless runtime.
 
 ```sh
-docker build -t okflint:local .
+docker build -t okfok:local .
 docker run --rm --read-only --network none \
-  -v "$PWD:/work:ro" okflint:local /work/bundle
+  -v "$PWD:/work:ro" okfok:local /work/bundle
 ```
 
 ## Generate Go knowledge bundles
@@ -57,20 +57,20 @@ okfok lint --repo . --bundle knowledge
 
 Generation is offline and does not execute Go code. The initial generator covers declared Go package symbols and members, writes only `knowledge/`, and refuses to overwrite hand-authored output. Its source provenance may point to regular non-symlinked files under the explicit repository workspace; Markdown concept links remain within `knowledge/`.
 
-The existing bare `okflint <bundle>` interface remains available for compatibility. The container entrypoint is now `okfok` and likewise treats a bare bundle path as legacy lint usage.
+The existing bare `okfok <bundle>` interface remains available for compatibility. The container entrypoint is now `okfok` and likewise treats a bare bundle path as legacy lint usage.
 
 ## Relationship viewer
 
 Serve a read-only local graph for a bundle with document nodes, local-reference edges, headings, source previews, and lint-state styling:
 
 ```sh
-okflint --serve 127.0.0.1:8080 ./bundle
+okfok --serve 127.0.0.1:8080 ./bundle
 # Open http://127.0.0.1:8080
 ```
 
 Clicking a heading loads that heading's bounded Markdown section into the side panel; "Open document source" serves the full document as safe plain text. The viewer never performs remote link checks or loads third-party web assets. It is deliberately a local server: select a loopback address unless access from another host is intentional.
 
-To serve a pinned remote repository through the container, clone it on the host first, mount it read-only, and publish only a loopback port. The bridge network permits the browser's inbound connection; `okflint` makes no outbound requests in viewer mode.
+To serve a pinned remote repository through the container, clone it on the host first, mount it read-only, and publish only a loopback port. The bridge network permits the browser's inbound connection; `okfok` makes no outbound requests in viewer mode.
 
 ```sh
 git clone https://github.com/finos/morphir-scala.git
@@ -79,7 +79,7 @@ git -C morphir-scala checkout 4b2f76f15fd3a241037323e8f92624f39430ed37
 docker run --rm --read-only --network bridge \
   -p 127.0.0.1:8080:8080 \
   -v "$PWD/morphir-scala:/work:ro" \
-  "$OKFLINT_IMAGE" \
+  "$OKFOK_IMAGE" \
   --serve 0.0.0.0:8080 /work/kb/bundles/morphir/morphir-ir-v3
 ```
 
@@ -90,14 +90,14 @@ Open `http://127.0.0.1:8080`. Direct Git URL fetching is intentionally unsupport
 The composite action runs a release image with a read-only workspace mount. Pin the image digest rather than a mutable tag:
 
 ```yaml
-- uses: mark-ht/okf-ok/.github/actions/okflint@v1
+- uses: mark-ht/okf-ok/.github/actions/okfok@v1
   with:
     image: ghcr.io/mark-ht/okf-ok@sha256:<published-digest>
     bundle-path: knowledge
     fail-on: warning
 ```
 
-It defaults to `--network none`, writes a JSONL report to `.okflint/report.jsonl`, and exposes the exit code, report path, and finding count as action outputs. Enable remote checks only on an explicitly trusted runner with an allowlist.
+It defaults to `--network none`, writes a JSONL report to `.okfok/report.jsonl`, and exposes the exit code, report path, and finding count as action outputs. Enable remote checks only on an explicitly trusted runner with an allowlist.
 
 ## Automation contract
 
@@ -110,11 +110,11 @@ Use `--format sarif` to produce a deterministic SARIF 2.1.0 report for code-scan
 ```yaml
 - run: >-
     docker run --rm --read-only --network none
-    -v "$PWD:/work:ro" "$OKFLINT_IMAGE"
-    --format sarif /work/knowledge > okflint.sarif
+    -v "$PWD:/work:ro" "$OKFOK_IMAGE"
+    --format sarif /work/knowledge > okfok.sarif
 - uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: okflint.sarif
+    sarif_file: okfok.sarif
 ```
 
 ## Agent skill

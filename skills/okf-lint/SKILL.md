@@ -2,19 +2,19 @@
 name: okf-lint
 description: Validate Open Knowledge Format bundles after creating or editing Markdown knowledge documents. Use before completing an OKF-related task to find malformed frontmatter and local or authorized remote reference drift.
 license: Apache-2.0
-compatibility: Requires the okflint CLI or a digest-pinned OCI image. Offline validation needs no network access.
+compatibility: Requires the okfok CLI or a digest-pinned OCI image. Offline validation needs no network access.
 ---
 
 # OKF lint
 
-Run this skill after editing an OKF bundle and before reporting completion. `okflint` is read-only. It distinguishes structural OKF errors from warning-level link health: OKF permits broken cross-links, but newly introduced warnings need repair or an explicit explanation.
+Run this skill after editing an OKF bundle and before reporting completion. `okfok` is read-only. It distinguishes structural OKF errors from warning-level link health: OKF permits broken cross-links, but newly introduced warnings need repair or an explicit explanation.
 
 ## Safe default
 
 Locate the bundle root containing the edited document, then run the offline checker with machine-readable output:
 
 ```sh
-okflint --format jsonl --fail-on warning <bundle-root>
+okfok --format jsonl --fail-on warning <bundle-root>
 ```
 
 If the binary is unavailable, use a reviewed, digest-pinned release image:
@@ -43,7 +43,7 @@ Do not use a mutable image tag in CI or agent automation.
 Remote probing is never implicit. Use it only with user-approved hosts and an environment authorized to reach them:
 
 ```sh
-okflint --format jsonl --check-remote --remote-policy allowlist \
+okfok --format jsonl --check-remote --remote-policy allowlist \
   --allow-host docs.example.com --fail-on-remote gone <bundle-root>
 ```
 
@@ -54,7 +54,7 @@ Never add credentials, bypass VPN restrictions, use private-network hosts, or se
 State the exact command, bundle root, and result. For example:
 
 ```text
-Validated `knowledge/` with `okflint --format jsonl --fail-on warning knowledge`:
+Validated `knowledge/` with `okfok --format jsonl --fail-on warning knowledge`:
 0 structural errors; 0 link warnings.
 ```
 
