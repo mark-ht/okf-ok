@@ -18,6 +18,9 @@ func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
 	if bytes.Contains(viewerHTML, []byte(`.append(document.createElementNS(ns,'title')).textContent`)) {
 		t.Fatal("viewer HTML assigns through Element.append, which returns undefined")
 	}
+	if !bytes.Contains(viewerHTML, []byte(`svg.replaceChildren();`)) {
+		t.Fatal("viewer HTML must clear stale SVG nodes before rerendering")
+	}
 }
 
 func TestViewerGraphAndDocumentRoutes(t *testing.T) {
