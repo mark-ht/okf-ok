@@ -9,6 +9,8 @@ import (
 
 func render(out io.Writer, ds []Diagnostic, format string) error {
 	switch format {
+	case "sarif":
+		return renderSARIF(out, ds)
 	case "json":
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")

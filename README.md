@@ -53,6 +53,15 @@ It defaults to `--network none`, writes a JSONL report to `.okflint/report.jsonl
 
 Exit status is `0` when no selected findings exist, `1` for diagnostics selected by `--fail-on` or `--fail-on-remote`, `2` for invalid invocation or an unreadable root, `3` for an output/internal failure, and `130` for cancellation. Bare `sources[].resource` values that might be scope descriptors are informational by default; use `--strict-source-paths` to require them to resolve locally.
 
+Use `--format sarif` to produce a deterministic SARIF 2.1.0 report for code-scanning annotations:
+
+```yaml
+- run: okflint --format sarif knowledge > okflint.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: okflint.sarif
+```
+
 ## Development
 
 ```sh

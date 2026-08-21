@@ -22,7 +22,7 @@ func (values *stringList) Set(value string) error {
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("okflint", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	format := flags.String("format", "text", "output format: text, json, or jsonl")
+	format := flags.String("format", "text", "output format: text, json, jsonl, or sarif")
 	failOn := flags.String("fail-on", "error", "fail on: error or warning")
 	strictSources := flags.Bool("strict-source-paths", false, "treat ambiguous source resources as local paths")
 	checkFragments := flags.Bool("check-fragments", false, "validate local Markdown heading fragments")
@@ -42,7 +42,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: okflint [flags] <bundle-root>")
 		return 2
 	}
-	if *format != "text" && *format != "json" && *format != "jsonl" {
+	if *format != "text" && *format != "json" && *format != "jsonl" && *format != "sarif" {
 		fmt.Fprintf(stderr, "invalid --format %q\n", *format)
 		return 2
 	}
