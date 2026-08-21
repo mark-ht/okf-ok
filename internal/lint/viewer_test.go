@@ -14,6 +14,9 @@ func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
 	if !bytes.Contains(viewerHTML, []byte(`const detail=document.getElementById('detail');`)) {
 		t.Fatal("viewer HTML relies on an implicit global detail element")
 	}
+	if bytes.Contains(viewerHTML, []byte(`.append(document.createElementNS(ns,'title')).textContent`)) {
+		t.Fatal("viewer HTML assigns through Element.append, which returns undefined")
+	}
 }
 
 func TestViewerGraphAndDocumentRoutes(t *testing.T) {
