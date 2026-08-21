@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,12 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
+	if !bytes.Contains(viewerHTML, []byte(`const detail=document.getElementById('detail');`)) {
+		t.Fatal("viewer HTML relies on an implicit global detail element")
+	}
+}
 
 func TestViewerGraphAndDocumentRoutes(t *testing.T) {
 	root := t.TempDir()
