@@ -76,7 +76,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 130
 	default:
 	}
-	diagnostics, err := Check(ctx, flags.Arg(0), Options{
+	result, err := CheckWithSummary(ctx, flags.Arg(0), Options{
 		StrictSourcePaths: *strictSources,
 		CheckFragments:    *checkFragments,
 		Remote:            RemoteOptions{Enabled: *checkRemote, Policy: policy, Hosts: allowedHosts, Workers: *remoteWorkers, MaxURLs: *maxRemoteURLs, Timeout: *remoteTimeout, Deadline: *remoteDeadline},
@@ -88,12 +88,12 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "okflint: %v\n", err)
 		return 2
 	}
-	if err := render(stdout, diagnostics, *format); err != nil {
+	if err := render(stdout, result.Diagnostics, result.Summary, *format); err != nil {
 		fmt.Fprintf(stderr, "okflint: writing output: %v\n", err)
 		return 3
 	}
 	errors, warnings, remoteFailures := 0, 0, 0
-	for _, d := range diagnostics {
+	for _, d := range result.Diagnostics {
 		if d.Severity == SeverityError {
 			errors++
 		}

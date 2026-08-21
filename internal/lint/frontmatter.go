@@ -66,6 +66,18 @@ func mapValue(node *yaml.Node, key string) *yaml.Node {
 	return nil
 }
 
+func conceptType(fm frontmatter) (string, bool) {
+	if fm.root == nil {
+		return "", false
+	}
+	typ := mapValue(fm.root, "type")
+	if typ == nil || typ.Kind != yaml.ScalarNode {
+		return "", false
+	}
+	value := strings.TrimSpace(typ.Value)
+	return value, value != ""
+}
+
 func validateConcept(path string, fm frontmatter) []Diagnostic {
 	if !fm.present {
 		return []Diagnostic{diagnostic("OKF010", SeverityError, Location{File: path, Line: 1, Column: 1}, Reference{}, "concept documents require YAML frontmatter")}
@@ -73,8 +85,8 @@ func validateConcept(path string, fm frontmatter) []Diagnostic {
 	if fm.root == nil {
 		return nil
 	} // parsing already emitted OKF011
-	typ := mapValue(fm.root, "type")
-	if typ == nil || typ.Kind != yaml.ScalarNode || strings.TrimSpace(typ.Value) == "" {
+	if _, ok := conceptType(fm); !ok {
+		typ := mapValue(fm.root, "type")
 		loc := nodeLocation(path, typ, fm.lineOffset)
 		return []Diagnostic{diagnostic("OKF012", SeverityError, loc, Reference{}, "concept frontmatter requires a non-empty scalar type")}
 	}

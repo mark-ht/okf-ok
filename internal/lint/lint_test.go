@@ -138,6 +138,39 @@ func TestRepeatedAutolinksHaveSeparateLocations(t *testing.T) {
 	}
 }
 
+func TestCheckWithSummary(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "notes/one.md", "---\ntype: Note\n---\nSee [missing](missing.md).\n")
+	writeTestFile(t, root, "index.md", "# Index\n")
+	writeTestFile(t, root, "data.txt", "not Markdown\n")
+
+	result, err := CheckWithSummary(context.Background(), root, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := result.Summary.BundleFiles, 3; got != want {
+		t.Fatalf("bundle files = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.MarkdownFilesRead, 2; got != want {
+		t.Fatalf("Markdown files read = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.ConceptDocuments, 1; got != want {
+		t.Fatalf("concept documents = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.ReservedDocuments, 1; got != want {
+		t.Fatalf("reserved documents = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.TypeCounts["Note"], 1; got != want {
+		t.Fatalf("Note type count = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.ReferencesChecked, 1; got != want {
+		t.Fatalf("references checked = %d, want %d", got, want)
+	}
+	if got, want := result.Summary.CodeCounts["OKF101"], 1; got != want {
+		t.Fatalf("OKF101 count = %d, want %d", got, want)
+	}
+}
+
 func TestMainCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -156,6 +189,17 @@ func TestMainThresholdAndJSONL(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), `"code":"OKF101"`) {
 		t.Fatalf("jsonl output = %s", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "Summary") {
+		t.Fatalf("jsonl must contain diagnostics only: %s", stdout.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if got := Main(context.Background(), []string{root}, &stdout, &stderr); got != 0 {
+		t.Fatalf("text exit = %d", got)
+	}
+	if !strings.Contains(stdout.String(), "Summary\n") || !strings.Contains(stdout.String(), "Document types\n") {
+		t.Fatalf("text summary = %s", stdout.String())
 	}
 	stdout.Reset()
 	stderr.Reset()

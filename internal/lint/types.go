@@ -54,6 +54,25 @@ type Options struct {
 	Remote            RemoteOptions
 }
 
+// Summary describes the work completed during one bundle check. Counts are
+// independent of the selected failure threshold and remote failure policy.
+type Summary struct {
+	BundleFiles       int
+	MarkdownFiles     int
+	MarkdownFilesRead int
+	ConceptDocuments  int
+	ReservedDocuments int
+	ReferencesChecked int
+	TypeCounts        map[string]int
+	SeverityCounts    map[Severity]int
+	CodeCounts        map[string]int
+}
+
+type Result struct {
+	Diagnostics []Diagnostic
+	Summary     Summary
+}
+
 func sortDiagnostics(ds []Diagnostic) {
 	sort.Slice(ds, func(i, j int) bool {
 		a, b := ds[i], ds[j]
