@@ -23,6 +23,7 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("okflint", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	format := flags.String("format", "text", "output format: text, json, jsonl, or sarif")
+	serve := flags.String("serve", "", "serve a read-only relationship viewer on address (for example 127.0.0.1:8080)")
 	failOn := flags.String("fail-on", "error", "fail on: error or warning")
 	strictSources := flags.Bool("strict-source-paths", false, "treat ambiguous source resources as local paths")
 	checkFragments := flags.Bool("check-fragments", false, "validate local Markdown heading fragments")
@@ -59,6 +60,14 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "invalid --remote-policy %q\n", *remotePolicy)
 		return 2
 	}
+	if *serve != "" && *format != "text" {
+		fmt.Fprintln(stderr, "--serve cannot be combined with a non-text --format")
+		return 2
+	}
+	if *serve != "" && *checkRemote {
+		fmt.Fprintln(stderr, "--serve does not permit --check-remote")
+		return 2
+	}
 	if *checkRemote && policy == RemoteOff {
 		fmt.Fprintln(stderr, "--check-remote requires --remote-policy=allowlist or public")
 		return 2
@@ -76,11 +85,22 @@ func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 130
 	default:
 	}
-	result, err := CheckWithSummary(ctx, flags.Arg(0), Options{
+	options := Options{
 		StrictSourcePaths: *strictSources,
 		CheckFragments:    *checkFragments,
 		Remote:            RemoteOptions{Enabled: *checkRemote, Policy: policy, Hosts: allowedHosts, Workers: *remoteWorkers, MaxURLs: *maxRemoteURLs, Timeout: *remoteTimeout, Deadline: *remoteDeadline},
-	})
+	}
+	if *serve != "" {
+		if err := Serve(ctx, flags.Arg(0), *serve, options, stderr); err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return 130
+			}
+			fmt.Fprintf(stderr, "okflint: viewer: %v\n", err)
+			return 2
+		}
+		return 0
+	}
+	result, err := CheckWithSummary(ctx, flags.Arg(0), options)
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return 130

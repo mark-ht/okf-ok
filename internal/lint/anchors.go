@@ -79,8 +79,22 @@ func anchorTarget(origin, filePart string) (string, bool) {
 	return target, true
 }
 
+type Heading struct {
+	ID    string `json:"id"`
+	Text  string `json:"text"`
+	Level int    `json:"level"`
+}
+
 func headings(source []byte) map[string]struct{} {
-	out := map[string]struct{}{}
+	out := make(map[string]struct{})
+	for _, heading := range documentHeadings(source) {
+		out[heading.ID] = struct{}{}
+	}
+	return out
+}
+
+func documentHeadings(source []byte) []Heading {
+	var out []Heading
 	counts := map[string]int{}
 	document := goldmark.New().Parser().Parse(text.NewReader(source))
 	_ = ast.Walk(document, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -91,7 +105,8 @@ func headings(source []byte) map[string]struct{} {
 		if !ok {
 			return ast.WalkContinue, nil
 		}
-		slug := headingSlug(string(heading.Text(source)))
+		value := string(heading.Text(source))
+		slug := headingSlug(value)
 		if slug == "" {
 			return ast.WalkContinue, nil
 		}
@@ -100,7 +115,7 @@ func headings(source []byte) map[string]struct{} {
 		if count > 0 {
 			slug += "-" + strconv.Itoa(count)
 		}
-		out[slug] = struct{}{}
+		out = append(out, Heading{ID: slug, Text: value, Level: heading.Level})
 		return ast.WalkContinue, nil
 	})
 	return out

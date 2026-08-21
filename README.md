@@ -45,7 +45,33 @@ docker run --rm --read-only --network none \
   -v "$PWD:/work:ro" okflint:local /work/bundle
 ```
 
-## GitHub Action
+## Relationship viewer
+
+Serve a read-only local graph for a bundle with document nodes, local-reference edges, headings, source previews, and lint-state styling:
+
+```sh
+okflint --serve 127.0.0.1:8080 ./bundle
+# Open http://127.0.0.1:8080
+```
+
+The viewer never performs remote link checks or loads third-party web assets. It is deliberately a local server: select a loopback address unless access from another host is intentional.
+
+To serve a pinned remote repository through the container, clone it on the host first, mount it read-only, and publish only a loopback port. The bridge network permits the browser's inbound connection; `okflint` makes no outbound requests in viewer mode.
+
+```sh
+git clone https://github.com/finos/morphir-scala.git
+git -C morphir-scala checkout 4b2f76f15fd3a241037323e8f92624f39430ed37
+
+docker run --rm --read-only --network bridge \
+  -p 127.0.0.1:8080:8080 \
+  -v "$PWD/morphir-scala:/work:ro" \
+  "$OKFLINT_IMAGE" \
+  --serve 0.0.0.0:8080 /work/kb/bundles/morphir/morphir-ir-v3
+```
+
+Open `http://127.0.0.1:8080`. Direct Git URL fetching is intentionally unsupported: pin and review the checkout outside the minimal runtime image.
+
++## GitHub Action
 
 The composite action runs a release image with a read-only workspace mount. Pin the image digest rather than a mutable tag:
 
