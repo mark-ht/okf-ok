@@ -33,6 +33,20 @@ docker run --rm -v "$PWD:/work:ro" \
 
 The image runs as a non-root user and has the same offline default as the CLI. Remote checks remain explicit command arguments; do not provide credentials or a writable bundle mount unless a separate workflow requires them.
 
+## GitHub Action
+
+The composite action runs a release image with a read-only workspace mount. Pin the image digest rather than a mutable tag:
+
+```yaml
+- uses: mark-ht/okf-ok/.github/actions/okflint@v1
+  with:
+    image: ghcr.io/mark-ht/okf-ok@sha256:<published-digest>
+    bundle-path: knowledge
+    fail-on: warning
+```
+
+It defaults to `--network none`, writes a JSONL report to `.okflint/report.jsonl`, and exposes the exit code, report path, and finding count as action outputs. Enable remote checks only on an explicitly trusted runner with an allowlist.
+
 ## Automation contract
 
 `--format jsonl` emits one `okf.lint/v1` diagnostic per line. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
