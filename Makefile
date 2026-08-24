@@ -28,6 +28,7 @@ generate-plan:
 	mkdir -p "$(REPO_ABS)/.okfok"
 	@set -e; temp="$(PLAN_HOST).tmp"; \
 	docker run --rm --read-only --network none \
+	  --user "$(USER_ID)" \
 	  -v "$(REPO_ABS):/work:ro" \
 	  $(IMAGE) generate plan --repo /work --bundle "$(BUNDLE)" --format json > "$$temp"; \
 	mv "$$temp" "$(PLAN_HOST)"
