@@ -1,6 +1,10 @@
 # okf-ok
 
-A container-first linter for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) bundles, implemented in Go.
+A container-first linter and Go knowledge-bundle generator for [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf), implemented in Go.
+
+## Why knowledge documents?
+
+A codebase explains *how* it works, but it is difficult to navigate as a durable map of its packages, types, functions, ownership, and source evidence. OKF turns that knowledge into small, linkable Markdown concepts with explicit provenance, making it easier for people and tools to discover relationships without treating generated summaries as an authority over the source code. `okfok generate` builds that map deterministically from Go declarations; `okfok lint` keeps it trustworthy as files and links move, by detecting structural and local-reference drift.
 
 `okfok` is read-only and offline by default. It validates the minimum OKF v0.2 document structure and reports local Markdown and standardized frontmatter references whose targets have drifted. OKF permits broken cross-links, so missing targets are warnings rather than conformance errors.
 
