@@ -45,6 +45,21 @@ docker run --rm --read-only --network none \
   -v "$PWD:/work:ro" okfok:local /work/bundle
 ```
 
+### Make shortcuts
+
+Run these from this `okfok` checkout. Set `REPO` to the Go repository to inspect; the Docker bind mount is read-only except for explicit generation apply. `generate-plan` writes a reviewable plan at `<REPO>/.okfok/plan.json`.
+
+```sh
+make build
+make generate-plan REPO=/path/to/go-repository
+# Review /path/to/go-repository/.okfok/plan.json.
+make generate-apply REPO=/path/to/go-repository
+make lint REPO=/path/to/go-repository
+make serve REPO=/path/to/go-repository PORT=8080
+```
+
+Override `IMAGE=ghcr.io/mark-ht/okf-ok@sha256:<digest>` to use a published image. Run `make help` for the target summary and `make check` for the local Go validation suite.
+
 ## Generate Go knowledge bundles
 
 `okfok` is the workspace command. It inventories local Go declarations and produces a deterministic, reviewable OKF plan; it never writes until `apply` receives that plan.
