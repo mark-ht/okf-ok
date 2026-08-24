@@ -1,0 +1,12 @@
+.git
+.github
+.pi
+docs/plan
+bin
+coverage.*
+*.out
+*.test
+.env
+Dockerfile
+README.md
+LICENSE

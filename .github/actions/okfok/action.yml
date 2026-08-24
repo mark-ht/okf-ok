@@ -1,0 +1,103 @@
+name: OKF lint
+description: Run a digest-pinned okfok container against an OKF bundle.
+inputs:
+  image:
+    description: Digest-pinned GHCR image, for example ghcr.io/mark-ht/okf-ok@sha256:<digest>.
+    required: true
+  bundle-path:
+    description: Bundle directory relative to the GitHub workspace.
+    default: .
+  format:
+    description: okfok output format.
+    default: jsonl
+  report-path:
+    description: Report file relative to the GitHub workspace.
+    default: .okfok/report.jsonl
+  fail-on:
+    description: Local finding threshold: error or warning.
+    default: error
+  strict-source-paths:
+    description: Treat ambiguous sources[].resource values as local paths.
+    default: "false"
+  check-fragments:
+    description: Check local heading fragments.
+    default: "false"
+  check-remote:
+    description: Enable explicitly authorized remote checks.
+    default: "false"
+  remote-policy:
+    description: Remote policy: off, allowlist, or public.
+    default: off
+  allow-hosts:
+    description: Newline-separated remote host allowlist.
+    default: ""
+  fail-on-remote:
+    description: Remote finding threshold: none, gone, redirected, or all.
+    default: none
+outputs:
+  exit-code:
+    description: okfok process exit code.
+    value: ${{ steps.lint.outputs.exit-code }}
+  report-path:
+    description: Report path relative to the workspace.
+    value: ${{ steps.lint.outputs.report-path }}
+  finding-count:
+    description: Number of emitted diagnostics.
+    value: ${{ steps.lint.outputs.finding-count }}
+runs:
+  using: composite
+  steps:
+    - id: lint
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        BUNDLE_PATH: ${{ inputs.bundle-path }}
+        FORMAT: ${{ inputs.format }}
+        REPORT_PATH: ${{ inputs.report-path }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        STRICT_SOURCE_PATHS: ${{ inputs.strict-source-paths }}
+        CHECK_FRAGMENTS: ${{ inputs.check-fragments }}
+        CHECK_REMOTE: ${{ inputs.check-remote }}
+        REMOTE_POLICY: ${{ inputs.remote-policy }}
+        ALLOW_HOSTS: ${{ inputs.allow-hosts }}
+        FAIL_ON_REMOTE: ${{ inputs.fail-on-remote }}
+      run: |
+        set -uo pipefail
+        if [[ "$IMAGE" != *@sha256:* ]]; then
+          echo "image must be pinned by digest" >&2
+          exit 2
+        fi
+        if [[ "$BUNDLE_PATH" = /* || "$BUNDLE_PATH" == *".."* ]]; then
+          echo "bundle-path must remain within the workspace" >&2
+          exit 2
+        fi
+        mkdir -p "$(dirname "$REPORT_PATH")"
+        args=(--format "$FORMAT" --fail-on "$FAIL_ON" --fail-on-remote "$FAIL_ON_REMOTE")
+        if [[ "$STRICT_SOURCE_PATHS" == "true" ]]; then args+=(--strict-source-paths); fi
+        if [[ "$CHECK_FRAGMENTS" == "true" ]]; then args+=(--check-fragments); fi
+        network_args=(--network none)
+        if [[ "$CHECK_REMOTE" == "true" ]]; then
+          network_args=()
+          args+=(--check-remote --remote-policy "$REMOTE_POLICY")
+          while IFS= read -r host; do
+            [[ -n "$host" ]] && args+=(--allow-host "$host")
+          done <<< "$ALLOW_HOSTS"
+        fi
+        set +e
+        docker run --rm "${network_args[@]}" \
+          -v "$GITHUB_WORKSPACE:/work:ro" \
+          "$IMAGE" "${args[@]}" "/work/$BUNDLE_PATH" >"$REPORT_PATH"
+        status=$?
+        set -e
+        count=$(wc -l <"$REPORT_PATH" | tr -d ' ')
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+        echo "report-path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+        echo "finding-count=$count" >> "$GITHUB_OUTPUT"
+        {
+          echo "### OKF lint"
+          echo "- Image: \`$IMAGE\`"
+          echo "- Findings: $count"
+          echo "- Exit code: $status"
+          echo "- Report: \`$REPORT_PATH\`"
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit "$status"
