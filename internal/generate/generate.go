@@ -427,6 +427,21 @@ func ReadPlan(input string) (Plan, error) {
 	return plan, nil
 }
 
+func outputOwnershipError(output string) error {
+	entries, err := os.ReadDir(output)
+	if err != nil {
+		return fmt.Errorf("cannot inspect existing bundle output %q: %w", output, err)
+	}
+	if len(entries) == 0 {
+		return fmt.Errorf("bundle output %q exists but is empty and has no .okfok-manifest.json; remove the empty directory with `rmdir %s` and rerun apply", output, output)
+	}
+	preview := make([]string, 0, min(5, len(entries)))
+	for _, entry := range entries[:min(5, len(entries))] {
+		preview = append(preview, entry.Name())
+	}
+	return fmt.Errorf("bundle output %q exists but is not okfok-owned (no .okfok-manifest.json; contains %s); refusing to overwrite hand-authored content", output, strings.Join(preview, ", "))
+}
+
 func Apply(ctx context.Context, plan Plan) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -444,7 +459,7 @@ func Apply(ctx context.Context, plan Plan) error {
 			return fmt.Errorf("bundle output must not be a symlink")
 		}
 		if _, err := os.Stat(filepath.Join(output, ".okfok-manifest.json")); err != nil {
-			return fmt.Errorf("bundle output exists and is not generator-owned: %s", output)
+			return outputOwnershipError(output)
 		}
 	} else if !os.IsNotExist(err) {
 		return err

@@ -112,6 +112,20 @@ func TestApplyProducesLintCleanOwnedBundle(t *testing.T) {
 	}
 }
 
+func TestApplyExplainsEmptyUnownedOutput(t *testing.T) {
+	repo := fixtureRepository(t)
+	if err := os.Mkdir(filepath.Join(repo, "knowledge"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := Build(context.Background(), repo, "knowledge")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Apply(context.Background(), plan); err == nil || !strings.Contains(err.Error(), "rmdir") {
+		t.Fatalf("empty output error = %v", err)
+	}
+}
+
 func TestApplyRejectsUnownedOutput(t *testing.T) {
 	repo := fixtureRepository(t)
 	writeFile(t, repo, "knowledge/hand.md", "---\ntype: Note\n---\n")
