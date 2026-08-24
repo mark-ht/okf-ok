@@ -247,11 +247,10 @@ func memberSymbols(fileSet *token.FileSet, pkg, owner string, expression ast.Exp
 	var out []Symbol
 	switch node := expression.(type) {
 	case *ast.StructType:
-		for _, field := range node.Fields.List {
-			for _, name := range field.Names {
-				out = append(out, makeSymbol(fileSet, pkg, "Go Struct Field", name.Name, owner, filename, field.Pos(), field.End(), field.Doc))
-			}
-		}
+		// Struct fields are represented in their owning type's source, not as
+		// standalone concepts. A document per field overwhelms real codebases
+		// without adding a useful navigation boundary.
+		return nil
 	case *ast.InterfaceType:
 		for _, field := range node.Methods.List {
 			for _, name := range field.Names {
@@ -336,6 +335,20 @@ func render(module, bundle string, symbols []Symbol, hashes []string) []Document
 			output := packagePath + "/symbols/" + symbolFile(symbol)
 			source := relativeSource(bundle, output, symbol.File)
 			text := []string{"# " + symbol.ID(), "", "# Source", "", "`" + symbol.File + ":" + strconv.Itoa(symbol.Line) + "-" + strconv.Itoa(symbol.EndLine) + "`"}
+			if symbol.Kind == "Go Type" {
+				var methods []Symbol
+				for _, candidate := range members {
+					if candidate.Kind == "Go Method" && candidate.Receiver == symbol.Name {
+						methods = append(methods, candidate)
+					}
+				}
+				if len(methods) > 0 {
+					text = append(text, "", "# Methods", "")
+					for _, method := range methods {
+						text = append(text, "* ["+method.ID()+"]("+relativeDocumentLink(output, packagePath+"/symbols/"+symbolFile(method))+")")
+					}
+				}
+			}
 			if symbol.Synopsis != "" {
 				text = append(text, "", "# Documentation", "", symbol.Synopsis)
 			}
@@ -352,6 +365,14 @@ func concept(kind, title, description, resource, body string) string {
 	}
 	return front + "---\n" + body
 }
+func relativeDocumentLink(from, to string) string {
+	value, err := filepath.Rel(filepath.FromSlash(path.Dir(from)), filepath.FromSlash(to))
+	if err != nil {
+		return to
+	}
+	return filepath.ToSlash(value)
+}
+
 func relativeSource(bundle, document, source string) string {
 	from := filepath.FromSlash(path.Dir(path.Join(bundle, document)))
 	value, err := filepath.Rel(from, filepath.FromSlash(source))

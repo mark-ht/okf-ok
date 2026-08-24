@@ -57,7 +57,7 @@ func TestBuildIncludesDeclaredSymbolsDeterministically(t *testing.T) {
 	if PlanHash(first) != PlanHash(second) {
 		t.Fatalf("plans differ: %s != %s", PlanHash(first), PlanHash(second))
 	}
-	want := []string{"widgets (widgets).Widget", "widgets (widgets).Widget.Name", "widgets (widgets).Named", "widgets (widgets).Named.Label", "widgets (widgets).DefaultName", "widgets (widgets).Count", "widgets (widgets).New", "widgets (widgets).Widget.Label"}
+	want := []string{"widgets (widgets).Widget", "widgets (widgets).Named", "widgets (widgets).Named.Label", "widgets (widgets).DefaultName", "widgets (widgets).Count", "widgets (widgets).New", "widgets (widgets).Widget.Label"}
 	got := make([]string, len(first.Symbols))
 	for i, symbol := range first.Symbols {
 		got[i] = symbol.ID()
@@ -76,6 +76,12 @@ func TestBuildIncludesDeclaredSymbolsDeterministically(t *testing.T) {
 	for _, document := range first.Documents {
 		if document.Source != "" && !strings.Contains(document.Content, "resource:") {
 			t.Fatalf("source document missing provenance: %#v", document)
+		}
+		if strings.Contains(document.Path, "struct-field") {
+			t.Fatalf("struct field document generated: %s", document.Path)
+		}
+		if strings.Contains(document.Path, "go-type-widgets-widgets-widget.md") && !strings.Contains(document.Content, "# Methods") {
+			t.Fatalf("type document does not link its methods: %s", document.Content)
 		}
 	}
 }
