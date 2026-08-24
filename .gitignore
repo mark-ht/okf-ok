@@ -34,3 +34,5 @@ docs/plan/
 # Editor/IDE
 # .idea/
 # .vscode/
+
+.okfok/
