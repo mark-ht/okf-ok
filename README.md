@@ -116,7 +116,41 @@ It defaults to `--network none`, writes a JSONL report to `.okfok/report.jsonl`,
 
 ## Automation contract
 
-The default text output ends with a deterministic summary table: discovered/read Markdown files, concept and reserved documents, checked references, document `type` counts, and findings grouped by severity and diagnostic code. `--format jsonl` emits one `okf.lint/v1` diagnostic per line and deliberately omits the summary so it remains stream-safe. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
+The default text output ends with a deterministic summary table: discovered/read Markdown files, concept and reserved documents, checked references, document `type` counts, and findings grouped by severity and diagnostic code. For example, this is a clean result from a generated `sweb-index-sol` bundle:
+
+```text
+Summary
+Metric                        Count
+Bundle files discovered        4987
+Markdown files discovered      4986
+Markdown files read            4986
+Concept documents              4934
+Reserved index/log documents   52
+References checked             19642
+
+Document types
+Type                 Documents
+Go Constant           163
+Go Function           625
+Go Interface Method   211
+Go Method             896
+Go Package            51
+Go Struct Field       2287
+Go Type               349
+Go Variable           352
+
+Findings by severity
+Severity  Count
+error      0
+warning    0
+info       0
+
+Findings by code
+Code    Count
+(none)  0
+```
+
+This captured bundle predates the generator change that consolidates struct fields into their owning type documents, so newly generated bundles do not include the `Go Struct Field` row. `--format jsonl` emits one `okf.lint/v1` diagnostic per line and deliberately omits the summary so it remains stream-safe. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
 
 Exit status is `0` when no selected findings exist, `1` for diagnostics selected by `--fail-on` or `--fail-on-remote`, `2` for invalid invocation or an unreadable root, `3` for an output/internal failure, and `130` for cancellation. Bare `sources[].resource` values that might be scope descriptors are informational by default; use `--strict-source-paths` to require them to resolve locally.
 
