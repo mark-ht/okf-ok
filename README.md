@@ -61,7 +61,7 @@ The existing bare `okfok <bundle>` interface remains available for compatibility
 
 ## Relationship viewer
 
-Serve a read-only local graph for a bundle with document nodes, local-reference edges, headings, source previews, and lint-state styling:
+Serve a read-only progressive relationship viewer. It opens with aggregate package/directory relationships, then uses search, tree navigation, and bounded selected-document neighborhoods instead of rendering an unreadable full-corpus graph:
 
 ```sh
 okfok --serve 127.0.0.1:8080 ./bundle

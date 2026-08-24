@@ -12,7 +12,7 @@ import (
 )
 
 func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
-	if !bytes.Contains(viewerHTML, []byte(`const detail=document.getElementById('detail');`)) {
+	if !bytes.Contains(viewerHTML, []byte(`detail=document.getElementById('detail')`)) {
 		t.Fatal("viewer HTML relies on an implicit global detail element")
 	}
 	if bytes.Contains(viewerHTML, []byte(`.append(document.createElementNS(ns,'title')).textContent`)) {
@@ -21,8 +21,8 @@ func TestViewerHTMLUsesExplicitDetailElement(t *testing.T) {
 	if !bytes.Contains(viewerHTML, []byte(`svg.replaceChildren();`)) {
 		t.Fatal("viewer HTML must clear stale SVG nodes before rerendering")
 	}
-	if !bytes.Contains(viewerHTML, []byte(`const groups=new Map()`)) {
-		t.Fatal("viewer HTML must group repeated incoming and outgoing references")
+	if !bytes.Contains(viewerHTML, []byte(`/api/neighborhood`)) {
+		t.Fatal("viewer HTML must request bounded neighborhoods rather than a full graph")
 	}
 }
 
@@ -49,12 +49,21 @@ func TestViewerGraphAndDocumentRoutes(t *testing.T) {
 
 	server := httptest.NewServer(viewerHandler(graph, root, Options{}))
 	defer server.Close()
-	response, err := http.Get(server.URL + "/api/graph")
+	response, err := http.Get(server.URL + "/api/overview")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if response.StatusCode != http.StatusOK || !strings.HasPrefix(response.Header.Get("Content-Type"), "application/json") {
-		t.Fatalf("graph response = %d %q", response.StatusCode, response.Header.Get("Content-Type"))
+		t.Fatalf("overview response = %d %q", response.StatusCode, response.Header.Get("Content-Type"))
+	}
+	response.Body.Close()
+
+	response, err = http.Get(server.URL + "/api/graph")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusNotFound {
+		t.Fatalf("legacy graph response = %d", response.StatusCode)
 	}
 	response.Body.Close()
 

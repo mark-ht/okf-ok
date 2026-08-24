@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -50,6 +51,7 @@ type ViewerEdge struct {
 	Line      int    `json:"line"`
 	Column    int    `json:"column"`
 	Status    string `json:"status"`
+	Count     int    `json:"count,omitempty"`
 }
 
 // BuildViewerGraph takes a read-only snapshot of a bundle for the local UI.
@@ -226,13 +228,48 @@ func viewerHandler(graph ViewerGraph, root string, options Options) http.Handler
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(viewerHTML)
 	})
-	mux.HandleFunc("/api/graph", func(w http.ResponseWriter, r *http.Request) {
+	writeJSON := func(w http.ResponseWriter, value any) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(value)
+	}
+	mux.HandleFunc("/api/overview", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		_ = json.NewEncoder(w).Encode(graph)
+		writeJSON(w, ViewerOverviewFor(graph))
+	})
+	mux.HandleFunc("/api/tree", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		value, err := ViewerTreeFor(graph, r.URL.Query().Get("path"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, value)
+	})
+	mux.HandleFunc("/api/search", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, ViewerSearch(graph, r.URL.Query().Get("q"), 50))
+	})
+	mux.HandleFunc("/api/neighborhood", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		depth, limit := viewerQueryInt(r, "depth", 1), viewerQueryInt(r, "limit", 150)
+		value, err := ViewerNeighborhoodFor(graph, r.URL.Query().Get("path"), depth, limit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, value)
 	})
 	mux.HandleFunc("/section", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -354,6 +391,18 @@ func safeViewerRead(root, file string) ([]byte, error) {
 		return nil, fmt.Errorf("document is not a regular file")
 	}
 	return os.ReadFile(current)
+}
+
+func viewerQueryInt(r *http.Request, key string, fallback int) int {
+	value := r.URL.Query().Get(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0
+	}
+	return parsed
 }
 
 func graphRoot(root string) string {
