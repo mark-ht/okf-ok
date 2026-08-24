@@ -45,7 +45,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           sbom: true
           provenance: mode=max
-      - uses: actions/attest-build-provenance@v2
+      # GitHub's attestation API is unavailable to user-owned private repositories.
+      # The image still carries BuildKit provenance from build-push-action above.
+      - if: github.event.repository.visibility == 'public'
+        uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
