@@ -135,7 +135,6 @@ Go Function           625
 Go Interface Method   211
 Go Method             896
 Go Package            51
-Go Struct Field       2287
 Go Type               349
 Go Variable           352
 
@@ -150,7 +149,7 @@ Code    Count
 (none)  0
 ```
 
-This captured bundle predates the generator change that consolidates struct fields into their owning type documents, so newly generated bundles do not include the `Go Struct Field` row. `--format jsonl` emits one `okf.lint/v1` diagnostic per line and deliberately omits the summary so it remains stream-safe. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
+`--format jsonl` emits one `okf.lint/v1` diagnostic per line and deliberately omits the summary so it remains stream-safe. Each diagnostic has a stable code, severity, bundle-relative file and source position, reference kind, optional field, target, resolved local target, outcome, and message. Output is sorted by file, position, code, and target. JSON emits the same ordered diagnostics as an array.
 
 Exit status is `0` when no selected findings exist, `1` for diagnostics selected by `--fail-on` or `--fail-on-remote`, `2` for invalid invocation or an unreadable root, `3` for an output/internal failure, and `130` for cancellation. Bare `sources[].resource` values that might be scope descriptors are informational by default; use `--strict-source-paths` to require them to resolve locally.
 
