@@ -89,7 +89,7 @@ func TestApplyProducesLintCleanOwnedBundle(t *testing.T) {
 	if err := Apply(context.Background(), plan); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(repo, "knowledge", ".ofkok-manifest.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(repo, "knowledge", ".okfok-manifest.json")); err != nil {
 		t.Fatal(err)
 	}
 	result, err := lint.CheckWithSummary(context.Background(), filepath.Join(repo, "knowledge"), lint.Options{WorkspaceRoot: repo})

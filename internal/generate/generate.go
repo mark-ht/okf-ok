@@ -186,7 +186,7 @@ func inventory(ctx context.Context, repo, bundle string) ([]Symbol, []Exclusion,
 
 func skipDirectory(base string) bool {
 	switch base {
-	case ".git", ".ofkok", "vendor", "node_modules", "dist", "build", "coverage":
+	case ".git", ".okfok", "vendor", "node_modules", "dist", "build", "coverage":
 		return true
 	}
 	return false
@@ -422,13 +422,13 @@ func Apply(ctx context.Context, plan Plan) error {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("bundle output must not be a symlink")
 		}
-		if _, err := os.Stat(filepath.Join(output, ".ofkok-manifest.json")); err != nil {
+		if _, err := os.Stat(filepath.Join(output, ".okfok-manifest.json")); err != nil {
 			return fmt.Errorf("bundle output exists and is not generator-owned: %s", output)
 		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	stage, err := os.MkdirTemp(filepath.Dir(output), ".ofkok-stage-")
+	stage, err := os.MkdirTemp(filepath.Dir(output), ".okfok-stage-")
 	if err != nil {
 		return err
 	}
@@ -460,10 +460,10 @@ func Apply(ctx context.Context, plan Plan) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(stage, ".ofkok-manifest.json"), append(content, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(stage, ".okfok-manifest.json"), append(content, '\n'), 0o644); err != nil {
 		return err
 	}
-	backup := output + ".ofkok-backup"
+	backup := output + ".okfok-backup"
 	_ = os.RemoveAll(backup)
 	if _, err := os.Lstat(output); err == nil {
 		if err := os.Rename(output, backup); err != nil {
